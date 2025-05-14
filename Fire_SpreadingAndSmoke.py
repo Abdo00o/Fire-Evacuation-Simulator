@@ -115,8 +115,8 @@ class Map():
                     self.frontier.add(state)
             
             for state in self.neighborsSomke(node):
-                if not self.frontier.contains_state(state) and state not in exploredSmoke and self.smokeAt[state[0]][state[1]]!=0:
-                    self.smokeAt[state[0]][state[1]] = self.smokeAt[node[0]][node[1]]+1 
+                if  state not in exploredSmoke and self.smokeAt[state[0]][state[1]]!=0:
+                    self.smokeAt[state[0]][state[1]] = self.fireAt[node[0]][node[1]]+1 
                     exploredSmoke.add(state)
             
             

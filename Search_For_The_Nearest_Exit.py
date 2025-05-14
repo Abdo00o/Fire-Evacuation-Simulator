@@ -46,7 +46,7 @@ class Map():
         with open(filename) as f:
             self.contents = f.read()
 
-        # Validate start and goal
+        # Validate start and exit
         if self.contents.count("C") != 1:
             raise Exception("map must have exactly one start point")
         if self.contents.count("E") ==0 :
@@ -59,7 +59,7 @@ class Map():
 
         # Keep track of walls
         self.walls = []
-        self.goal =[]
+        self.exit =[]
         self.arriveAt = []
         for i in range(self.height):
             row = []
@@ -75,7 +75,7 @@ class Map():
                         row.append(False)
                     elif self.contents[i][j] == "E":
                         arrive.append(1e9)
-                        self.goal.append((i, j)) 
+                        self.exit.append((i, j)) 
                         row.append(False)
                     else:
                         arrive.append(1e9)
@@ -89,23 +89,7 @@ class Map():
         self.solution = None
 
 
-    def print(self):
-        solution = self.solution[1] if self.solution is not None else None
-        print()
-        for i, row in enumerate(self.walls):
-            for j, col in enumerate(row):
-                if col:
-                    print("█", end="")
-                elif (i, j) == self.start:
-                    print("A", end="")
-                elif (i, j) == self.goal:
-                    print("B", end="")
-                elif solution is not None and (i, j) in solution:
-                    print("*", end="")
-                else:
-                    print(" ", end="")
-            print()
-        print()
+    
 
 
     def neighbors(self, state):
@@ -149,8 +133,8 @@ class Map():
             node = frontier.remove() #node = removed node
             self.num_explored += 1
 
-            # If node is a goal, then we have a solution
-            if node.state in self.goal:
+            # If node is a exit, then we have a solution
+            if node.state in self.exit:
                 actions = []
                 cells = []
                 while node.parent is not None:
@@ -172,6 +156,16 @@ class Map():
                     child = Node(state=state, parent=node, action=action)
                     frontier.add(child)
 
+    def Print(self) :  
+        print(self.solution[0]) 
+        print(self.solution[1])
+
+    def mix_colors(self, color1, color2, weight1=0.5, weight2=0.5):
+        return tuple(
+            round(c1 * weight1 + c2 * weight2)
+            for c1, c2 in zip(color1, color2)
+        )
+
 
     def output_image(self, filename , fs ):
         from PIL import Image, ImageDraw
@@ -186,49 +180,60 @@ class Map():
         )
         draw = ImageDraw.Draw(img)
 
-        solution = self.solution[1] if self.solution is not None else None
-
+        
         for i, row in enumerate(self.contents):
             for j, col in enumerate(row):
-                """print(i,j)
-                print(fs.fireAt[i][j])
-                print(fs.smokeAt[i][j])
-                print(self.arriveAt[i][j])"""
+                
                 # Walls
                 if col=="#":
                     fill = (40, 40, 40)
 
                 # Start
                 elif (i, j) == self.start:
-                    fill = (255, 102, 102)
+                    fill = (0, 191, 255)
 
                 # Exit
-                elif (i, j) in self.goal:
+                elif (i, j) in self.exit:
                     fill = (0, 171, 28)
 
                 # Solution
-                elif solution is not None and (i, j) in solution:
-                    if fs.fireAt[i][j]<=self.arriveAt[i][j] and fs.smokeAt[i][j]<=self.arriveAt[i][j] : 
-                        fill= (200, 170, 123)
-                    elif fs.fireAt[i][j]<=self.arriveAt[i][j] : 
-                        fill = (142, 119, 72)
-                    elif fs.smokeAt[i][j]<=self.arriveAt[i][j] : 
-                         fill =(195, 242, 195)
-                    else :fill =  (144, 238, 144)   # Light lime green
+                else : 
+                    
+                    fire = fs.fireAt[i][j]<=self.arriveAt[i][j] and fs.fireAt[i][j]!= 1e9
+                    smoke = fs.smokeAt[i][j]<=self.arriveAt[i][j]and fs.smokeAt[i][j]!= 1e9
+                    obstacle = self.contents[i][j]=='O' 
+                    flameObject = self.contents[i][j]=='A' ; 
+                    solu = (i,j) in self.solution[1] 
 
-                # Explored
-                elif solution is not None and (i, j) in self.explored:
-                    if fs.fireAt[i][j]<=self.arriveAt[i][j] and fs.smokeAt[i][j]<=self.arriveAt[i][j] : 
-                        fill= (238, 169, 108)
-                    elif fs.fireAt[i][j]<=self.arriveAt[i][j] : 
-                        fill = (180, 118, 57)
-                    elif fs.smokeAt[i][j]<=self.arriveAt[i][j] : 
-                         fill =(233, 240, 179)
-                    else :fill = (220, 235, 113)   # Shade of red
-
-                # Empty cell
-                else:
-                    fill = (237, 240, 252)  # Very Light Blue
+                    if fire and smoke  :
+                        if solu :fill=self.mix_colors((178, 34, 34),(144, 238, 144))
+                        else :fill = (178, 34, 34)
+                    elif obstacle and smoke :  
+                        if solu :fill=self.mix_colors((90, 70, 50),(144, 238, 144))
+                        else :fill = (90, 70, 50)
+                    elif flameObject and smoke : 
+                        if solu :fill=self.mix_colors((184, 134, 11),(144, 238, 144))
+                        else :fill = (184, 134, 11)
+                        
+                    elif fire : 
+                        if solu :fill=self.mix_colors((255, 69, 0),(144, 238, 144))
+                        else :fill = (255, 69, 0)
+                    elif flameObject : 
+                        if solu :fill=self.mix_colors((255, 215, 0),(144, 238, 144))
+                        else :fill = (255, 215, 0)
+                    elif smoke : 
+                        if solu :fill=self.mix_colors((105, 105, 105),(144, 238, 144))
+                        else :fill = (105, 105, 105)
+                    elif obstacle : 
+                        if solu :fill=self.mix_colors((160, 82, 45),(144, 238, 144))
+                        else :fill = (160, 82, 45)
+                    else : 
+                        if (i,j) in self.solution[1] :
+                            fill = (144, 238, 144)
+                        elif (i,j) in  self.explored :
+                            fill = (255, 255, 153)  
+                        else :  
+                            fill = (237, 240, 252)
 
                 # Draw cell
                 draw.rectangle(
@@ -245,16 +250,17 @@ class main():
         f= Fire_SpreadingAndSmoke
         Fs = f.Map(file) 
         m = Map(file)
+        
         Fs.solve()
-        print("Maze:")
-        m.print()
-        print("Solving...")
+        
+        #m.print()
+        #print("Solving...")
         m.solve()
         print("States Explored:", m.num_explored)
-        print("Solution:")
-        m.print()
+        print("Solution of the nearest path:")
+        m.Print()
         m.output_image("Nearest_Exit_Map.png" , Fs)
-
+        print()
 
 
 """
